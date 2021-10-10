@@ -1,0 +1,121 @@
+Задание 1:
+1. [2 балла] Создайте папку в корневой HDFS-папке
+2. [2 балла] Создайте в созданной папке новую вложенную папку.
+3. [3 балла] Что такое Trash в  распределенной FS? Как сделать так, чтобы файлы удалялись сразу, минуя  “Trash”?
+4. [2 балла] Создайте пустой файл в подпапке из пункта 2.
+5. [2 балла] Удалите  созданный файл.
+6. [2 балла] Удалите  созданные папки
+
+Ответы 1:
+1. hdfs dfs -mkdir /directory1 
+2. hdfs dfs -mkdir /directory1/directory2
+3. Hadoop предоставляет корзину (trash) для хранения файлов, удаленных из HDFS. Пока файл остается в корзине, его можно восстановить. Если функция trash включена, то при удалении файлы перемещаются в каталог .trash в домашнем каталоге пользователя, а не удаляются безвозвратно. По умолчанию она включена и это рекомендуемая настройка. Однако при необходимости ее можно обойти, выставив соответствующий флаг (skipTrash):
+  hdfs dfs -rm -skipTrash <FILE>
+4. hdfs dfs -touchz /directory1/directory2/file  
+5. hdfs dfs -rm /directory1/directory2/file  
+6. hdfs dfs -rm -r (или -rmr [deprecated]) /directory1 - удалила папки рекурсивно
+
+Задание 2:
+1. [3 балла] Скопируйте любой в новую папку на HDFS
+2. [3 балла] Выведите содержимое  HDFS-файла на экран.
+3. [3 балла] Выведите  содержимое нескольких последних строчек HDFS-файла на экран.
+4. [3 балла] Выведите  содержимое нескольких первых строчек HDFS-файла на экран.
+5. [3 балла] Переместите копию  файла в HDFS на новую локацию
+
+Ответы 2:
+1. docker cp hellow.txt namenode:/ 
+   exec -it namenode /bin/bash
+   hdfs dfs -put hellow.txt /dir1/hellow.txt
+2. hdfs dfs -cat /dir1/hellow.txt
+3. hdfs dfs -cat /dir1/hellow.txt | tail -2
+4. hdfs dfs -cat /dir1/hellow.txt | head -2
+5. hdfs dfs -cp /dir1/hellow.txt /
+
+Задание 3:
+1. [4  баллов]  Изменить    replication  factor  для  файла.  Как  долго  занимает  время  на  увеличение  /  
+уменьшение числа реплик для файла?
+2. [4 баллов] Найдите  информацию по файлу, блокам и их расположениям с помощью “hdfs fsck”
+3. [4  баллов]  Получите    информацию  по  любому  блоку  из  п.2  с  помощью  "hdfs  fsck  -blockId”.  
+Обратите внимание на Generation Stamp (GS number).
+
+Ответы 3:
+1. 
+hdfs dfs -setrep -w 1 /hellow.txt -- заняло порядка 12-14 секунд
+Было предупреждение: 
+the waiting time may be long for DECREASING the number of replications.
+hdfs dfs -setrep -w 3 /hellow.txt -- заняло примерно то же время (может, на 1-2 секунды быстрее)
+2. hdfs fsck /hellow.txt
+Выдача: 
+  Connecting to namenode via http://namenode:9870/fsck?ugi=root&path=%2Fhellow.txt
+  FSCK started by root (auth:SIMPLE) from /172.19.0.6 for path /hellow.txt at Sun Oct 03 11:47:52 UTC 2021
+
+  Status: HEALTHY
+   Number of data-nodes:  3
+   Number of racks:               1
+   Total dirs:                    0
+   Total symlinks:                0
+
+  Replicated Blocks:
+   Total size:    580 B
+   Total files:   1
+   Total blocks (validated):      1 (avg. block size 580 B)
+   Minimally replicated blocks:   1 (100.0 %)
+   Over-replicated blocks:        0 (0.0 %)
+   Under-replicated blocks:       0 (0.0 %)
+   Mis-replicated blocks:         0 (0.0 %)
+   Default replication factor:    3
+   Average block replication:     3.0
+   Missing blocks:                0
+   Corrupt blocks:                0
+   Missing replicas:              0 (0.0 %)
+
+  Erasure Coded Block Groups:
+   Total size:    0 B
+   Total files:   0
+   Total block groups (validated):        0
+   Minimally erasure-coded block groups:  0
+   Over-erasure-coded block groups:       0
+   Under-erasure-coded block groups:      0
+   Unsatisfactory placement block groups: 0
+   Average block group size:      0.0
+   Missing block groups:          0
+   Corrupt block groups:          0
+   Missing internal blocks:       0
+  FSCK ended at Sun Oct 03 11:47:52 UTC 2021 in 16 milliseconds
+
+
+  The filesystem under path '/hellow.txt' is HEALTHY
+  
+3. Для начала найдем blockId (внутреннее представление) командой: 
+hdfs fsck /hellow.txt -files -blocks -locations
+... BP-1035192988-172.19.0.6-1633103194673:blk_1073741835_1011 len=580 Live_repl=3... 
+
+Затем выполним команду:
+hdfs fsck -blockId blk_1073741835
+
+Результат: 
+Connecting to namenode via http://namenode:9870/fsck?ugi=root&blockId=blk_1073741835+&path=%2F
+FSCK started by root (auth:SIMPLE) from /172.19.0.6 at Sun Oct 03 11:56:08 UTC 2021
+
+Block Id: blk_1073741835
+Block belongs to: /hellow.txt
+No. of Expected Replica: 3
+No. of live Replica: 3
+No. of excess Replica: 0
+No. of stale Replica: 0
+No. of decommissioned Replica: 0
+No. of decommissioning Replica: 0
+No. of corrupted Replica: 0
+Block replica on datanode/rack: 2b6cfcf03df2/default-rack is HEALTHY
+Block replica on datanode/rack: c462726f06b5/default-rack is HEALTHY
+Block replica on datanode/rack: 44aad32fbb55/default-rack is HEALTHY
+
+
+
+Структура Block Id:
+
+blk_<blockid>_<GS> 
+
+Где: 
+blockid = ID блока
+Generation Stamp = целое число, которое увеличивается по и записывает версию определенного блока (нужно для версионирования реплик)
