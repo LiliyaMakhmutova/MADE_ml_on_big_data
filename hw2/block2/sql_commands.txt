@@ -1,0 +1,84 @@
+Датасет никак не предобрабатывала.
+
+1. 	SELECT artist_lastfm, scrobbles_lastfm FROM artists
+	ORDER BY scrobbles_lastfm DESC
+	LIMIT 1;
+
+Результат: 
++---------------+------------------+
+| artist_lastfm | scrobbles_lastfm |
++---------------+------------------+
+|  The Beatles  |    517126254     |
++---------------+------------------+
+
+
+2. 	SELECT score as ganra, COUNT(score) as count
+	FROM artists
+	LATERAL VIEW explode(split(tags_lastfm,'; ')) t AS score
+	GROUP BY score
+	ORDER BY count DESC
+	LIMIT 1;
+
+Результат: 
++-----------+-------+
+|   score   | count |
++-----------+-------+
+| seen live | 12119 |
++-----------+-------+
+
+3.  WITH top_10_ganras AS (
+    SELECT score as ganra, COUNT(score) as count
+	FROM artists
+	LATERAL VIEW explode(split(tags_lastfm,'; ')) t AS score
+	GROUP BY score
+	ORDER BY count DESC
+	LIMIT 10
+	),
+	artists_extended AS (
+		SELECT *
+		FROM artists
+		LATERAL VIEW explode(split(tags_lastfm,'; ')) t AS ganra
+	)
+	SELECT DISTINCT artist_lastfm, listeners_lastfm from artists_extended
+	INNER JOIN top_10_ganras ON artists_extended.ganra=top_10_ganras.ganra
+	ORDER BY artists_extended.listeners_lastfm DESC
+	LIMIT 10;
+
++-----------------------+------------------+
+|     artists_lastfm    | listeners_lastfm |
++-----------------------+------------------+
+|        Coldplay       |     5381567      |
+|       Radiohead       |     4732528      |
+| Red Hot Chili Peppers |     4620835      |
+|        Rihanna        |     4558193      |
+|         Eminem        |     4517997      |
+|      The Killers      |     4428868      |
+|       Kanye West      |     4390502      |
+|        Nirvana        |     4272894      |
+|          Muse         |     4089612      |
+|         Queen         |     4023379      |
++-----------------------+------------------+
+
+4. Выдать рейтинг стран по количеству суммарных прослушиваний (listeners_lastfm) исполнителей оттуда:
+	SELECT country_lastfm, SUM(listeners_lastfm) as total_listeners
+	FROM artists
+	GROUP BY country_lastfm
+	ORDER BY total_listeners DESC;
+
+Результат (таблицу обрезала): 
++--------------------------------------------------------------------------------------------------------------------------------------+-----------------+
+|                                                            country_lastfm                                                            | total_listeners |
++--------------------------------------------------------------------------------------------------------------------------------------+-----------------+
+|                                                            United States                                                             |    1388335333   |
+|                                                                 null                                                                 |    600281539    |
+|                                                            United Kingdom                                                            |    580612270    |
+|                                                               Germany                                                                |    108495478    |
+|                                                                Canada                                                                |    107881678    |
+|                                                                Sweden                                                                |     89493568    |
+|                                                                France                                                                |     70571004    |
+|                                                              Australia                                                               |     67350912    |
+|                                                        Georgia; United States                                                        |     50124361    |
+|                                                    United Kingdom; United States                                                     |     50116656    |
+|                                                       Scotland; United Kingdom                                                       |     38932141    |
+|                                                        Jersey; United States                                                         |     36558087    |
++--------------------------------------------------------------------------------------------------------------------------------------+-----------------+
