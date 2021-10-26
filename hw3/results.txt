@@ -1,5 +1,0 @@
-RMSE on validation data: 4.72800261875953
-RMSE on test data: 7.009733210239394
-
-Dataset and predictions are in root project folder.
-Main source code is in /src/main/scala/linear_regression .
